@@ -31,3 +31,6 @@ def test_second_type_union() -> None:
     
 def test_union_numeric() -> None:
     assert matches(42, str | float) == False
+    
+# Collection Types
+
