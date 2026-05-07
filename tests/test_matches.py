@@ -91,3 +91,28 @@ def test_typecheck_multi_param_valid() -> None:
 def test_typecheck_multi_param_invalid() -> None:
     with pytest.raises(TypeError):
         combine("2", "x", [1, 2])
+        
+@typecheck
+def mixed_func(a: int, b: int | None = None, c: str | None = None) -> str:
+    # just return something so we can assert on it
+    return f"{a}-{b}-{c}"        
+        
+def test_mixed_required_optional_only_required() -> None:
+    result = mixed_func(1)
+    assert result == "1-None-None"
+
+def test_mixed_optional_given_valid_values() -> None:
+    result = mixed_func(2, 10, "x")
+    assert result == "2-10-x"
+    
+def test_mixed_optional_given_none() -> None:
+    result = mixed_func(3, None, None)
+    assert result == "3-None-None"
+
+def test_mixed_required_wrong_type() -> None:
+    with pytest.raises(TypeError):
+        mixed_func("not-an-int")  # a should be int
+
+def test_mixed_optional_wrong_type() -> None:
+    with pytest.raises(TypeError):
+        mixed_func(1, "not-an-int")  # b should be int | None

@@ -8,9 +8,6 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 def matches(value, expected_type) -> bool:
-    logger.debug(f"Value: {value}, Expected Type: {getattr(expected_type, "__name__", expected_type)}")
-    logger.debug(f"Expected Type: {expected_type}")
-    
     if isinstance(expected_type, types.UnionType):
         logger.debug(expected_type.__args__)
         return any(matches(value, t) for t in expected_type.__args__)
@@ -43,7 +40,7 @@ def matches(value, expected_type) -> bool:
         if not value:
             return True
         
-        return all(matches(elem, type) for elem, type in zip(value, args))
+        return all(matches(elem, elem_type) for elem, elem_type in zip(value, args))
     
     return isinstance(value, expected_type)
 
@@ -54,17 +51,40 @@ def typecheck(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         bound = sig.bind(*args, **kwargs)
-        logger.debug(f"sig bind: {bound}")
         bound.apply_defaults()
         
-        for name, value in bound.arguments.items():
-            expected_type = hints.get(name)
+        for param_name, param_value in bound.arguments.items():
+            param = sig.parameters[param_name]
+            expected_type = hints.get(param_name)
+            logger.debug(f"Param: {param}")
             logger.debug(f"Expected Type: {expected_type}")
-            if expected_type is not None and not matches(value, expected_type):
-                raise TypeError(f"Argument '{name}' = {value!r} does not match expected type {expected_type}")
-        return func(*args, **kwargs)
+            
+            if expected_type is None:
+                continue
+            
+            #optional, default handling
+            type_args = get_args(expected_type)
+            
+            is_union = isinstance(expected_type, types.UnionType)
+            is_optional = is_union and type(None) in type_args
+            has_default = param.default is not inspect._empty
+            is_default_value = has_default and param_value == param.default
+            
+            if is_optional and is_default_value:
+                continue
+    
+            if not matches(param_value, expected_type):
+                raise TypeError(f"Argument '{param_name}' = {param_value!r} does not match expected type {expected_type}")
+            
+        return func(**bound.arguments)
     return wrapper
 
 @typecheck
 def greet(name: str, times: int) -> str:
+    return name * times
+
+@typecheck
+def greet_opt(name: str, times: int | None = None) -> str:
+    if times is None:
+        times = 1
     return name * times
