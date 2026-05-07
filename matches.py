@@ -2,6 +2,7 @@ import logging
 import types
 import inspect
 from typing import get_type_hints, get_origin, get_args
+from functools import wraps
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -49,6 +50,8 @@ def matches(value, expected_type) -> bool:
 def typecheck(func):
     hints = get_type_hints(func)
     sig = inspect.signature(func)
+    
+    @wraps(func)
     def wrapper(*args, **kwargs):
         bound = sig.bind(*args, **kwargs)
         logger.debug(f"sig bind: {bound}")
@@ -61,3 +64,7 @@ def typecheck(func):
                 raise TypeError(f"Argument '{name}' = {value!r} does not match expected type {expected_type}")
         return func(*args, **kwargs)
     return wrapper
+
+@typecheck
+def greet(name: str, times: int) -> str:
+    return name * times

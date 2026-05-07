@@ -1,5 +1,5 @@
 import pytest
-from matches import matches
+from matches import matches, typecheck
 
 def test_int() -> None:
     assert matches(42, int) == True
@@ -62,3 +62,32 @@ def test_tuple_type_empty() -> None:
     
 def test_tuple_type_extra() -> None:
     assert matches((1, "test", 2), tuple[int, str]) == True
+
+@typecheck
+def greet(name: str, times: int) -> str:
+    return name * times
+
+def test_typecheck_valid_call() -> None:
+    assert greet("hi", 3) == "hihihi"
+    
+@typecheck
+def repeat(msg: str, times: int = 2) -> str:
+    return msg * times
+    
+def test_typecheck_invalid_call() -> None:
+    with pytest.raises(TypeError):
+        greet("hi", "three")
+
+def test_typecheck_default_arg_valid() -> None:
+    assert repeat("ha") == "haha" 
+    
+@typecheck
+def combine(a: int, b: str, c: list[int]) -> str:
+    return b * a + str(sum(c))
+
+def test_typecheck_multi_param_valid() -> None:
+    assert combine(2, "x", [1, 2]) == "xx3"
+
+def test_typecheck_multi_param_invalid() -> None:
+    with pytest.raises(TypeError):
+        combine("2", "x", [1, 2])
