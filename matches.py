@@ -46,12 +46,18 @@ def matches(value, expected_type) -> bool:
     
     return isinstance(value, expected_type)
 
-def greet(name: str, times: int) -> str:
-    return name * times
-
-hints = get_type_hints(greet)
-sig = inspect.signature(greet)
-
-print(hints)
-print(sig.parameters)
-
+def typecheck(func):
+    hints = get_type_hints(func)
+    sig = inspect.signature(func)
+    def wrapper(*args, **kwargs):
+        bound = sig.bind(*args, **kwargs)
+        logger.debug(f"sig bind: {bound}")
+        bound.apply_defaults()
+        
+        for name, value in bound.arguments.items():
+            expected_type = hints.get(name)
+            logger.debug(f"Expected Type: {expected_type}")
+            if expected_type is not None and not matches(value, expected_type):
+                raise TypeError(f"Argument '{name}' = {value!r} does not match expected type {expected_type}")
+        return func(*args, **kwargs)
+    return wrapper
