@@ -1,15 +1,10 @@
-import logging
 import types
 import inspect
 from typing import get_type_hints, get_origin, get_args
 from functools import wraps
 
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
-
 def matches(value, expected_type) -> bool:
     if isinstance(expected_type, types.UnionType):
-        logger.debug(expected_type.__args__)
         return any(matches(value, t) for t in expected_type.__args__)
     
     origin = get_origin(expected_type)
@@ -56,8 +51,6 @@ def typecheck(func):
         for param_name, param_value in bound.arguments.items():
             param = sig.parameters[param_name]
             expected_type = hints.get(param_name)
-            logger.debug(f"Param: {param}")
-            logger.debug(f"Expected Type: {expected_type}")
             
             if expected_type is None:
                 continue
@@ -78,13 +71,3 @@ def typecheck(func):
             
         return func(**bound.arguments)
     return wrapper
-
-@typecheck
-def greet(name: str, times: int) -> str:
-    return name * times
-
-@typecheck
-def greet_opt(name: str, times: int | None = None) -> str:
-    if times is None:
-        times = 1
-    return name * times
